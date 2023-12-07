@@ -522,6 +522,43 @@ app.get("/photosOfUser/:id", function (request, response) {
 });
 });
 
+// URL to get the most recently uploaded photo for a user
+app.get("/user/recentPhoto/:userId", function (request, response) {
+  const userId = request.params.userId;
+
+  Photo.findOne({ user_id: userId }).sort({ date_time: -1 })
+      .then((photo) => {
+        response.json(photo);
+      })
+      .catch((err) => {
+        console.error("Error in /user/recentPhoto/:userId", err);
+        response.status(500).send(JSON.stringify(err));
+      });
+});
+
+
+// URL to get the photo with the most comments for a user
+app.get("/user/mostCommentedPhoto/:userId", function (request, response) {
+  const userId = request.params.userId;
+
+  Photo.aggregate([
+    { $match: { user_id: new mongoose.Types.ObjectId(userId) } },
+    { $addFields: { commentCount: { $size: "$comments" } } },
+    { $sort: { commentCount: -1 } },
+    { $limit: 1 }
+  ])
+      .then((photos) => {
+        if (photos.length === 0) {
+          response.status(404).json({ message: "No photos found for the user" });
+        } else {
+          response.json(photos[0]);
+        }
+      })
+      .catch((err) => {
+        console.error("Error in /user/mostCommentedPhoto/:userId", err);
+        response.status(500).send(JSON.stringify(err));
+      });
+});
 const server = app.listen(3000, function () {
   const port = server.address().port;
   console.log(
