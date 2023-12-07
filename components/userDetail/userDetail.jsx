@@ -16,6 +16,8 @@ class UserDetail extends React.Component {
     super(props);
     this.state = {
       userDetails: undefined,
+        recentPhoto: undefined,
+        mostCommentedPhoto: undefined
     };
   }
 
@@ -40,11 +42,43 @@ handleUserChange(user_id){
                 this.setState({
                     userDetails: new_user
                 });
+
+                // Fetch the most recently uploaded photo
+                axios.get("/user/recentPhoto/" + user_id)
+                    .then((response) => {
+                        const recentPhoto = response.data;
+                        this.setState({ recentPhoto });
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching recent photo", error);
+                    });
+
+                // Fetch the photo with the most comments
+                axios.get("/user/mostCommentedPhoto/" + user_id)
+                    .then((response) => {
+                        const mostCommentedPhoto = response.data;
+                        this.setState({ mostCommentedPhoto });
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching most commented photo", error);
+                    });
+
                 const main_content = "User Details for " + new_user.first_name + " " + new_user.last_name;
                 this.props.changeTopbarContent(main_content);
             });
     }
-  render() {
+    navigateToUserPhotos = (photoId) => {
+        // Assuming you have a route defined for the user photos view
+        this.props.history.push(`/photos/${this.state.userDetails._id}/${photoId}`);
+    };
+
+    formatDate = (dateTimeString) => {
+        const date = new Date(dateTimeString);
+        const formattedDate = date.toISOString().replace(/T/, ' ').replace(/\.\d+Z$/, '');
+        return formattedDate;
+    }
+
+    render() {
     const { userDetails } = this.state;
     return userDetails ? (
       <div>
@@ -99,6 +133,34 @@ handleUserChange(user_id){
           className="custom-field"
           value={userDetails.occupation}
         />
+          {this.state.recentPhoto && (
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                  <img
+                      src={`images/${this.state.recentPhoto.file_name}`}
+                      alt="Recent Photo"
+                      onClick={() => this.navigateToUserPhotos(this.state.recentPhoto._id)}
+                      style={{ width: '150px', height: '150px' }}
+                  />
+                  <div style={{ marginLeft: '10px' }}>
+                      <p>Recent Photo Date: {this.formatDate(this.state.recentPhoto.date_time)}</p>
+                  </div>
+              </div>
+
+          )}
+          {this.state.mostCommentedPhoto && (
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                  <img
+                      src={`images/${this.state.mostCommentedPhoto.file_name}`}
+                      alt="Most Commented Photo"
+                      onClick={() => this.navigateToUserPhotos(this.state.mostCommentedPhoto._id)}
+                      style={{ width: '150px', height: '150px' }}
+                  />
+                  <div style={{ marginLeft: '10px' }}>
+                      <p>Most Commented Photo Comments Count: {this.state.mostCommentedPhoto.commentCount}</p>
+                  </div>
+              </div>
+
+          )}
       </div>
     ) : (
       <div />
