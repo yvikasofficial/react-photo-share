@@ -241,6 +241,9 @@ app.post("/photos/new", function (request, response) {
     }
     const timestamp = new Date().valueOf();
     const filename = 'U' +  String(timestamp) + request.file.originalname;
+    const sharingList = JSON.parse(request.body.sharingList || "[]");
+    const isPrivate = request.body.isPrivate;
+    
     fs.writeFile("./images/" + filename, request.file.buffer, function (err2) {
       if (err2) {
         console.error("Error in /photos/new", err2);
@@ -253,7 +256,9 @@ app.post("/photos/new", function (request, response) {
             file_name: filename,
             date_time: new Date(),
             user_id: new mongoose.Types.ObjectId(user_id),
-            comment: []
+            sharingList: sharingList,
+            isPrivate: isPrivate,
+            comment: [],
           })
           .then(() => {
             response.end();
@@ -411,6 +416,8 @@ app.get("/user/:id", function (request, response) {
  */
 app.get("/photosOfUser/:id", function (request, response) {
   if (hasNoUserSession(request, response)) return;
+
+  var userId = getSessionUserID(request);
   const id = request.params.id;
   User.findById(id,{__v:0, login_name:0, password: 0})
   .then((user) => {
@@ -482,8 +489,20 @@ app.get("/photosOfUser/:id", function (request, response) {
       response.status(500).send();
       return;
     }
-    // We got the object - return it in JSON format.
-    response.end(JSON.stringify(photos));
+    photos = JSON.parse(JSON.stringify(photos));
+    
+    if (id === userId) {
+      response.end(JSON.stringify(photos));
+    } else {
+      const visiblePhotos = photos.filter((photo) => {
+        return (
+          (photo.isPrivate && photo.user_id.toString() === userId) || // Only owner for private photos
+          (!photo.isPrivate && (photo.sharingList.includes(userId) || photo.sharingList.length === 0))
+        );
+      });
+      response.end(JSON.stringify(visiblePhotos));
+    }
+    
   });
 })
 .catch( (err) => {
@@ -503,7 +522,6 @@ app.get("/photosOfUser/:id", function (request, response) {
 });
 });
 
-
 const server = app.listen(3000, function () {
   const port = server.address().port;
   console.log(
@@ -513,5 +531,3 @@ const server = app.listen(3000, function () {
       __dirname
   );
 });
-
-
