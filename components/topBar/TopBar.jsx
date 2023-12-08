@@ -16,7 +16,7 @@ import "./TopBar.css";
 import axios from "axios";
 
 /**
- * Define TopBar, a React componment of project #5
+ * Define TopBar, a React component of project #5
  */
 class TopBar extends React.Component {
   constructor(props) {
@@ -239,14 +239,11 @@ class TopBar extends React.Component {
                 </Snackbar>
               </Box>
             ) : (
-              "Please Login"
+              "Login to continue"
             )}
           </Typography>
           <Typography variant="h6" color="inherit">
             {this.props.page_content}
-          </Typography>
-          <Typography variant="h6" component="div" color="inherit">
-            Version: {this.state.app_version.version}
           </Typography>
         </Toolbar>
       </AppBar>
