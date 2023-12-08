@@ -559,6 +559,95 @@ app.get("/user/mostCommentedPhoto/:userId", function (request, response) {
         response.status(500).send(JSON.stringify(err));
       });
 });
+
+
+app.delete("/deletePhoto/:photoId", function (request, response) {
+  const photoId = request.params.photoId;
+  const user_id = getSessionUserID(request);
+
+  // Check if the user has the authority to delete the photo
+  Photo.findOne({ _id: new mongoose.Types.ObjectId(photoId) }, function (err, photo) {
+    if (err) {
+      console.error("Error checking photo ownership:", err);
+      response.status(500).send();
+    } else if (!photo || !photo.user_id.equals(user_id)) {
+      console.error("Unauthorized photo deletion attempt");
+      response.status(401).send();
+    } else {
+      // User has the authority to delete the photo
+      Photo.deleteOne({ _id: new mongoose.Types.ObjectId(photoId) }, function (err) {
+        if (err) {
+          console.error("Error deleting photo:", err);
+          response.status(500).send();
+        } else {
+          console.log("Photo deleted successfully.");
+          response.end();
+        }
+      });
+    }
+  });
+});
+
+app.delete("/deleteComment/:commentId", function (request, response) {
+  const commentId = request.params.commentId;
+  const user_id = getSessionUserID(request);
+
+  // Check if the user has the authority to delete the comment
+  Photo.findOne({ "comments._id": new mongoose.Types.ObjectId(commentId) }, function (err, photo) {
+    if (err) {
+      console.error("Error checking comment ownership:", err);
+      response.status(500).send();
+    } else if (!photo || !photo.comments.find(c => c._id.equals(commentId) && c.user_id.equals(user_id))) {
+      console.error("Unauthorized comment deletion attempt");
+      response.status(401).send();
+    } else {
+      Photo.updateOne(
+        { "comments._id": new mongoose.Types.ObjectId(commentId) },
+        { $pull: { comments: { _id: new mongoose.Types.ObjectId(commentId) } } },
+        function (err) {
+          if (err) {
+            console.error("Error deleting comment:", err);
+            response.status(500).send();
+          } else {
+            console.log("Comment deleted successfully.");
+            response.end();
+          }
+        }
+      );
+    }
+  });
+});
+
+
+app.delete("/deleteUser/:userId", function (request, response) {
+  const userId = request.params.userId;
+  const user_id = getSessionUserID(request);
+
+  // Check if the user has the authority to delete the user account
+  User.findOne({ _id: new mongoose.Types.ObjectId(userId) }, function (err, user) {
+    if (err) {
+      console.error("Error checking user account ownership:", err);
+      response.status(500).send();
+    } else if (!user || !user._id.equals(user_id)) {
+      console.error("Unauthorized user account deletion attempt");
+      response.status(401).send();
+    } else {
+      // Delete the user's data from the database
+      User.deleteOne({ _id: new mongoose.Types.ObjectId(userId) }, function (err) {
+        if (err) {
+          console.error("Error deleting user account:", err);
+          response.status(500).send();
+        } else {
+          // Provide a final confirmation message to the user
+          response.status(200).json({ message: "Are you sure you want to delete your account?" });
+
+        }
+      });
+    }
+  });
+});
+
+
 const server = app.listen(3000, function () {
   const port = server.address().port;
   console.log(
